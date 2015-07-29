@@ -1178,9 +1178,8 @@
         _.mixin(EventBus.prototype, {
             _trigger: function(type, args) {
                 var $e;
-                $e = $.Event(namespace + type);
-                (args = args || []).unshift($e);
-                this.$el.trigger.apply(this.$el, args);
+                args = args || [];
+                this.$el.trigger.apply(this.$el, [ namespace + type, args ]);
                 return $e;
             },
             before: function(type) {
