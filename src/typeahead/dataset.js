@@ -55,6 +55,10 @@ var Dataset = (function() {
     // a hint to figuring out of the source will return async suggestions
     this.async = _.isUndefined(o.async) ? this.source.length > 2 : !!o.async;
 
+    // prevent calling sync automatically (before source is called)
+    // default is true, pass in false to disable (this prevents flickering)
+    this.autoSync = o.autoSync || _.isUndefined(o.autoSync) ? true : false;
+
     this._resetLastSuggestion();
 
     this.$el = $(o.node)
@@ -242,11 +246,17 @@ var Dataset = (function() {
       this.cancel = function cancel() {
         canceled = true;
         that.cancel = $.noop;
-        that.async && that.trigger('asyncCanceled', query);
+        that.async && that.trigger('asyncCanceled', query, that.name);
       };
 
       this.source(query, sync, async);
-      !syncCalled && sync([]);
+
+      if(this.autoSync){
+          !syncCalled && sync([]);
+      }
+      else{
+          !syncCalled && fireAsyncRequested();
+      }
 
       function sync(suggestions) {
         if (syncCalled) { return; }
@@ -257,10 +267,14 @@ var Dataset = (function() {
 
         that._overwrite(query, suggestions);
 
-        if (rendered < that.limit && that.async) {
-          that.trigger('asyncRequested', query);
-        }
+        fireAsyncRequested();
       }
+
+      function fireAsyncRequested(){
+          if (rendered < that.limit && that.async) {
+              that.trigger("asyncRequested", query, that.name);
+          }
+      }      
 
       function async(suggestions) {
         suggestions = suggestions || [];
@@ -269,10 +283,17 @@ var Dataset = (function() {
         // do not render the suggestions as they've become outdated
         if (!canceled && rendered < that.limit) {
           that.cancel = $.noop;
-          rendered += suggestions.length;
-          that._append(query, suggestions.slice(0, that.limit - rendered));
 
-          that.async && that.trigger('asyncReceived', query);
+          if(!rendered){
+              that._overwrite(query, suggestions);
+          }
+          else{
+              suggestions = suggestions.slice(0, that.limit - rendered);
+              that._append(query, suggestions);                            
+          }
+
+          rendered += suggestions.length;
+          that.async && that.trigger("asyncReceived", query, that.name);
         }
       }
     },

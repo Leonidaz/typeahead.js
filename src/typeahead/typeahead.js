@@ -136,15 +136,15 @@ var Typeahead = (function() {
       this.eventBus.trigger('render', suggestions, async, dataset);
     },
 
-    _onAsyncRequested: function onAsyncRequested(type, dataset, query) {
+    _onAsyncRequested: function onAsyncRequested(type, query, dataset) {
       this.eventBus.trigger('asyncrequest', query, dataset);
     },
 
-    _onAsyncCanceled: function onAsyncCanceled(type, dataset, query) {
+    _onAsyncCanceled: function onAsyncCanceled(type, query, dataset) {
       this.eventBus.trigger('asynccancel', query, dataset);
     },
 
-    _onAsyncReceived: function onAsyncReceived(type, dataset, query) {
+    _onAsyncReceived: function onAsyncReceived(type, query, dataset) {
       this.eventBus.trigger('asyncreceive', query, dataset);
     },
 

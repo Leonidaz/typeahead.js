@@ -672,6 +672,7 @@
             this.templates = getTemplates(o.templates, this.displayFn);
             this.source = o.source.__ttAdapter ? o.source.__ttAdapter() : o.source;
             this.async = _.isUndefined(o.async) ? this.source.length > 2 : !!o.async;
+            this.autoSync = o.autoSync || _.isUndefined(o.autoSync) ? true : false;
             this._resetLastSuggestion();
             this.$el = $(o.node).addClass(this.classes.dataset).addClass(this.classes.dataset + "-" + this.name);
         }
@@ -787,10 +788,14 @@
                 this.cancel = function cancel() {
                     canceled = true;
                     that.cancel = $.noop;
-                    that.async && that.trigger("asyncCanceled", query);
+                    that.async && that.trigger("asyncCanceled", query, that.name);
                 };
                 this.source(query, sync, async);
-                !syncCalled && sync([]);
+                if (this.autoSync) {
+                    !syncCalled && sync([]);
+                } else {
+                    !syncCalled && fireAsyncRequested();
+                }
                 function sync(suggestions) {
                     if (syncCalled) {
                         return;
@@ -799,17 +804,25 @@
                     suggestions = (suggestions || []).slice(0, that.limit);
                     rendered = suggestions.length;
                     that._overwrite(query, suggestions);
+                    fireAsyncRequested();
+                }
+                function fireAsyncRequested() {
                     if (rendered < that.limit && that.async) {
-                        that.trigger("asyncRequested", query);
+                        that.trigger("asyncRequested", query, that.name);
                     }
                 }
                 function async(suggestions) {
                     suggestions = suggestions || [];
                     if (!canceled && rendered < that.limit) {
                         that.cancel = $.noop;
+                        if (!rendered) {
+                            that._overwrite(query, suggestions);
+                        } else {
+                            suggestions = suggestions.slice(0, that.limit - rendered);
+                            that._append(query, suggestions);
+                        }
                         rendered += suggestions.length;
-                        that._append(query, suggestions.slice(0, that.limit - rendered));
-                        that.async && that.trigger("asyncReceived", query);
+                        that.async && that.trigger("asyncReceived", query, that.name);
                     }
                 }
             },
@@ -1102,13 +1115,13 @@
                 this._updateHint();
                 this.eventBus.trigger("render", suggestions, async, dataset);
             },
-            _onAsyncRequested: function onAsyncRequested(type, dataset, query) {
+            _onAsyncRequested: function onAsyncRequested(type, query, dataset) {
                 this.eventBus.trigger("asyncrequest", query, dataset);
             },
-            _onAsyncCanceled: function onAsyncCanceled(type, dataset, query) {
+            _onAsyncCanceled: function onAsyncCanceled(type, query, dataset) {
                 this.eventBus.trigger("asynccancel", query, dataset);
             },
-            _onAsyncReceived: function onAsyncReceived(type, dataset, query) {
+            _onAsyncReceived: function onAsyncReceived(type, query, dataset) {
                 this.eventBus.trigger("asyncreceive", query, dataset);
             },
             _onFocused: function onFocused() {
